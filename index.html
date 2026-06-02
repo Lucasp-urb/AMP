@@ -6,232 +6,149 @@
     <title>Analyse des Communes - Dashboard Interactif</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
-            color: #333;
-            margin: 20px;
-        }
-        h1, h2 {
-            text-align: center;
-        }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .controls {
-            margin-bottom: 30px;
-            text-align: center;
-            background: #e9ecef;
-            padding: 15px;
-            border-radius: 6px;
-        }
-        select {
-            padding: 8px 12px;
-            font-size: 16px;
-            width: 60%;
-            max-width: 400px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-        .chart-wrapper {
-            margin-bottom: 50px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        svg {
-            background-color: #fff;
-            border: 1px solid #eee;
-            border-radius: 4px;
-        }
-        /* Styles des points */
-        .dot {
-            transition: fill 0.3s ease, r 0.3s ease, opacity 0.3s ease;
-            opacity: 0.6;
-        }
-        .dot.highlighted {
-            fill: #ff4757 !important; /* Couleur vive pour la sélection */
-            opacity: 1;
-            stroke: #000;
-            stroke-width: 1.5px;
-        }
-        /* Axes */
-        .axis text {
-            font-size: 12px;
-            fill: #555;
-        }
-        .axis path, .axis line {
-            stroke: #ccc;
-        }
-        .grid line {
-            stroke: #f1f1f1;
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; color: #333; margin: 20px; }
+        h1, h2 { text-align: center; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .controls { margin-bottom: 30px; text-align: center; background: #e9ecef; padding: 15px; border-radius: 6px; }
+        select { padding: 8px 12px; font-size: 16px; width: 60%; max-width: 400px; border-radius: 4px; border: 1px solid #ccc; }
+        .chart-wrapper { margin-bottom: 50px; display: flex; flex-direction: column; align-items: center; }
+        svg { background-color: #fff; border: 1px solid #eee; border-radius: 4px; }
+        .dot { transition: fill 0.3s ease, r 0.3s ease, opacity 0.3s ease; opacity: 0.6; }
+        .dot.highlighted { fill: #ff4757 !important; opacity: 1; stroke: #000; stroke-width: 1.5px; }
+        .axis text { font-size: 12px; fill: #555; }
+        .axis path, .axis line { stroke: #ccc; }
+        .grid line { stroke: #f1f1f1; }
     </style>
 </head>
 <body>
-
 <div class="container">
     <h1>Visualisation Interactive des Communes</h1>
-    
     <div class="controls">
-        <label for="commune-select"><strong>Sélectionner une ou plusieurs communes :</strong> </label><br><br>
-        <select id="commune-select" multiple size="5">
-            </select>
+        <label for="commune-select"><strong>Sélectionner une ou plusieurs communes :</strong></label><br><br>
+        <select id="commune-select" multiple size="5"></select>
         <p style="font-size: 12px; color: #666; margin-top: 5px;">
             *(Maintenez Ctrl sous Windows / Cmd sous Mac pour sélectionner plusieurs communes)*
         </p>
     </div>
-
     <div class="chart-wrapper">
-        <h2>Émissions CO2 vs Temps d'accès</h2>
+        <h2>Émissions CO₂ vs Temps d'accès aux emplois</h2>
         <div id="chart1"></div>
     </div>
-
     <div class="chart-wrapper">
-        <h2>Densité Moyenne vs Couverture Arborustive</h2>
+        <h2>Densité Moyenne vs Part de végétation totale</h2>
         <div id="chart2"></div>
     </div>
 </div>
 
 <script>
-d3.csv("donnees.csv").then(function(rawValues) {
-    // Convertir les chaînes de caractères du CSV en nombres
+// Nom du fichier CSV à placer dans le même répertoire que ce fichier HTML
+const CSV_FILE = "donnees.csv";
+
+d3.dsv(";", CSV_FILE).then(function(rawValues) {
+
     const data = rawValues.map(d => ({
         nom_offici: d.nom_offici,
-        co2_pi_ok: +d.co2_pi_ok,
-        access_pi: +d.access_pi,
-        cos_avg_ok: +d.cos_avg_ok,
-        txrboru_ok: +d.txrboru_ok
+        co2_pi_ok:   +d.co2_pi_ok,
+        access_pi:   +d.access_pi,
+        cos_avg_ok:  +d.cos_avg_ok,
+        prct_veg_tot: +d.prct_veg_tot
     }));
 
-// Configuration des dimensions des graphiques
-const margin = {top: 20, right: 30, bottom: 50, left: 60},
-      width = 800 - margin.left - margin.right,
-      height = 400 - margin.top - margin.bottom;
+    const margin = { top: 20, right: 30, bottom: 50, left: 60 },
+          width  = 800 - margin.left - margin.right,
+          height = 400 - margin.top  - margin.bottom;
+    const defaultColor = "#a4b0be";
 
-// Couleur par défaut pour les points non sélectionnés
-const defaultColor = "#a4b0be"; 
+    data.sort((a, b) => a.nom_offici.localeCompare(b.nom_offici));
 
-// Tri des données pour la liste déroulante
-data.sort((a, b) => a.nom_offici.localeCompare(b.nom_offici));
-
-// Populer le Select
-const select = d3.select("#commune-select");
-data.forEach(d => {
-    select.append("option")
-          .attr("value", d.nom_offici)
-          .text(d.nom_offici);
-});
-
-// --- FONCTION DE CRÉATION DE GRAPHIQUE ---
-function createScatterPlot(selector, xField, yField, xLabel, yLabel) {
-    // Initialisation SVG
-    const svg = d3.select(selector)
-        .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform", `translate(${margin.left},${margin.top})`);
-
-    // Échelles (Scales)
-    const x = d3.scaleLinear()
-        .domain([0, d3.max(data, d => d[xField]) * 1.1]) // +10% de marge en haut
-        .range([0, width]);
-
-    const y = d3.scaleLinear()
-        .domain([0, d3.max(data, d => d[yField]) * 1.1])
-        .range([height, 0]);
-
-    // Grille de fond (Optionnelle mais aide à la lecture)
-    svg.append("g")			
-        .attr("class", "grid")
-        .attr("transform", `translate(0,${height})`)
-        .call(d3.axisBottom(x).tickSize(-height).tickFormat(""));
-    svg.append("g")			
-        .attr("class", "grid")
-        .call(d3.axisLeft(y).tickSize(-width).tickFormat(""));
-
-    // Axes
-    svg.append("g")
-        .attr("class", "axis")
-        .attr("transform", `translate(0,${height})`)
-        .call(d3.axisBottom(x))
-        .append("text")
-        .attr("x", width / 2)
-        .attr("y", 40)
-        .attr("fill", "#000")
-        .style("text-anchor", "middle")
-        .style("font-weight", "bold")
-        .text(xLabel);
-
-    svg.append("g")
-        .attr("class", "axis")
-        .call(d3.axisLeft(y))
-        .append("text")
-        .attr("transform", "rotate(-90)")
-        .attr("x", -height / 2)
-        .attr("y", -45)
-        .attr("fill", "#000")
-        .style("text-anchor", "middle")
-        .style("font-weight", "bold")
-        .text(yLabel);
-
-    // Dessin des points
-    const dots = svg.selectAll(".dot")
-        .data(data)
-        .enter()
-        .append("circle")
-        .attr("class", d => `dot commune-${slugify(d.nom_offici)}`) // Classe unique par commune
-        .attr("cx", d => x(d[xField]))
-        .attr("cy", d => y(d[yField]))
-        .attr("r", 6)
-        .attr("fill", defaultColor);
-
-    // Ajout d'un titre au survol (Tooltip natif simple)
-    dots.append("title")
-        .text(d => `${d.nom_offici}\n${xLabel}: ${d[xField]}\n${yLabel}: ${d[yField]}`);
-}
-
-// Utilitaire pour nettoyer les noms (gérer les espaces/accents dans les classes CSS)
-function slugify(str) {
-    return str.toLowerCase().replace(/[^a-z0-9]/g, "-");
-}
-
-// --- INITIALISATION DES DEUX NUAGES ---
-// Graphique 1 : X = access_pi, Y = co2_pi_ok
-createScatterPlot("#chart1", "access_pi", "co2_pi_ok", "Temps d'accès moyen à 50k hab. (min)", "Émissions carbone / individu (tCO2e)");
-
-// Graphique 2 : X = cos_avg_ok, Y = txrboru_ok
-createScatterPlot("#chart2", "cos_avg_ok", "txrboru_ok", "Densité moyenne", "Taux de couverture arbustif (%)");
-
-
-// --- GESTION DE L'INTERACTIVITÉ ---
-select.on("change", function() {
-    // Récupérer la liste de toutes les options sélectionnées
-    const selectedOptions = Array.from(this.selectedOptions).map(opt => opt.value);
-
-    // Réinitialiser tous les points en gris
-    d3.selectAll(".dot")
-      .classed("highlighted", false)
-      .attr("r", 6);
-
-    // Si aucune commune n'est sélectionnée, on s'arrête là (tout reste gris)
-    if (selectedOptions.length === 0) return;
-
-    // Activer la couleur pour les communes sélectionnées sur les deux graphiques simultanément
-    selectedOptions.forEach(name => {
-        d3.selectAll(`.commune-${slugify(name)}`)
-          .classed("highlighted", true)
-          .attr("r", 9) // On grossit un peu le point sélectionné pour le détacher
-          .raise(); // Passe le point au premier plan
+    // Populate select
+    const select = d3.select("#commune-select");
+    data.forEach(d => {
+        select.append("option").attr("value", d.nom_offici).text(d.nom_offici);
     });
+
+    // xDomain / yDomain : [min, max] explicite ou null pour auto
+    function createScatterPlot(selector, xField, yField, xLabel, yLabel, xDomain, yDomain) {
+        const svg = d3.select(selector)
+            .append("svg")
+            .attr("width",  width  + margin.left + margin.right)
+            .attr("height", height + margin.top  + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const xExt = d3.extent(data, d => d[xField]);
+        const yExt = d3.extent(data, d => d[yField]);
+        const xPad = (xExt[1] - xExt[0]) * 0.05;
+        const yPad = (yExt[1] - yExt[0]) * 0.05;
+
+        const x = d3.scaleLinear()
+            .domain(xDomain || [xExt[0] - xPad, xExt[1] + xPad])
+            .range([0, width]);
+
+        const y = d3.scaleLinear()
+            .domain(yDomain || [yExt[0] - yPad, yExt[1] + yPad])
+            .range([height, 0]);
+
+        svg.append("g").attr("class", "grid").attr("transform", `translate(0,${height})`)
+            .call(d3.axisBottom(x).tickSize(-height).tickFormat(""));
+        svg.append("g").attr("class", "grid")
+            .call(d3.axisLeft(y).tickSize(-width).tickFormat(""));
+
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${height})`)
+            .call(d3.axisBottom(x))
+            .append("text").attr("x", width / 2).attr("y", 40)
+            .attr("fill", "#000").style("text-anchor", "middle").style("font-weight", "bold")
+            .text(xLabel);
+
+        svg.append("g").attr("class", "axis").call(d3.axisLeft(y))
+            .append("text").attr("transform", "rotate(-90)")
+            .attr("x", -height / 2).attr("y", -45)
+            .attr("fill", "#000").style("text-anchor", "middle").style("font-weight", "bold")
+            .text(yLabel);
+
+        svg.selectAll(".dot").data(data).enter().append("circle")
+            .attr("class", d => `dot commune-${slugify(d.nom_offici)}`)
+            .attr("cx", d => x(d[xField]))
+            .attr("cy", d => y(d[yField]))
+            .attr("r", 6)
+            .attr("fill", defaultColor)
+            .append("title")
+            .text(d => `${d.nom_offici}\n${xLabel}: ${d[xField].toFixed(2)}\n${yLabel}: ${d[yField].toFixed(2)}`);
+    }
+
+    function slugify(str) {
+        return str.toLowerCase().replace(/[^a-z0-9]/g, "-");
+    }
+
+    // Graphique 1 : accès emplois (axe X calé sur la plage réelle des données)
+    createScatterPlot("#chart1", "access_pi", "co2_pi_ok",
+        "Temps d'accès moyen à 50k emplois (min)", "Émissions carbone / individu (tCO2e)",
+        null, null);
+
+    // Graphique 2 : densité vs végétation totale
+    createScatterPlot("#chart2", "cos_avg_ok", "prct_veg_tot",
+        "Densité moyenne (hab/km²)", "Part de végétation totale (%)",
+        null, null);
+
+    // Interactivité
+    select.on("change", function() {
+        const selectedOptions = Array.from(this.selectedOptions).map(opt => opt.value);
+        d3.selectAll(".dot").classed("highlighted", false).attr("r", 6);
+        if (selectedOptions.length === 0) return;
+        selectedOptions.forEach(name => {
+            d3.selectAll(`.commune-${slugify(name)}`)
+                .classed("highlighted", true).attr("r", 9).raise();
+        });
+    });
+
+}).catch(err => {
+    document.body.innerHTML = `<div style="color:red;padding:20px;font-size:16px;">
+        <strong>Erreur de chargement :</strong> impossible de lire <code>${CSV_FILE}</code>.<br><br>
+        Ce fichier doit être servi via un serveur HTTP (pas en <code>file://</code>).<br>
+        En local : <code>python -m http.server</code> puis ouvrir <a href="http://localhost:8000">localhost:8000</a>.
+    </div>`;
+    console.error(err);
 });
 </script>
-
 </body>
 </html>
