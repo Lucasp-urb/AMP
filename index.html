@@ -99,16 +99,15 @@
 </div>
 
 <script>
-// 1. DONNÉES FICTIVES (À remplacer par votre vrai fichier de données)
-const data = [
-    { nom_offici: "Commune A", co2_pi_ok: 4.2, access_pi: 15, cos_avg_ok: 120, txrboru_ok: 45 },
-    { nom_offici: "Commune B", co2_pi_ok: 7.8, access_pi: 45, cos_avg_ok: 450, txrboru_ok: 12 },
-    { nom_offici: "Commune C", co2_pi_ok: 2.1, access_pi: 8,  cos_avg_ok: 85,  txrboru_ok: 78 },
-    { nom_offici: "Commune D", co2_pi_ok: 5.5, access_pi: 22, cos_avg_ok: 210, txrboru_ok: 35 },
-    { nom_offici: "Commune E", co2_pi_ok: 9.1, access_pi: 60, cos_avg_ok: 800, txrboru_ok: 5  },
-    { nom_offici: "Commune F", co2_pi_ok: 3.4, access_pi: 30, cos_avg_ok: 150, txrboru_ok: 55 },
-    { nom_offici: "Commune G", co2_pi_ok: 6.0, access_pi: 12, cos_avg_ok: 320, txrboru_ok: 22 }
-];
+d3.csv("donnees.csv").then(function(rawValues) {
+    // Convertir les chaînes de caractères du CSV en nombres
+    const data = rawValues.map(d => ({
+        nom_offici: d.nom_offici,
+        co2_pi_ok: +d.co2_pi_ok,
+        access_pi: +d.access_pi,
+        cos_avg_ok: +d.cos_avg_ok,
+        txrboru_ok: +d.txrboru_ok
+    }));
 
 // Configuration des dimensions des graphiques
 const margin = {top: 20, right: 30, bottom: 50, left: 60},
